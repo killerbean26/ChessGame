@@ -2,7 +2,14 @@
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
+/**
+    There is no AI :(. Unfortunately I could not implement it.
+    Also there are no some special moves.
+    King does not have own special rules.
 
+    Code is still buggy i think. it could be better :D
+
+ */
 
 public class BoardManager : MonoBehaviour
 {
@@ -21,37 +28,26 @@ public class BoardManager : MonoBehaviour
     public List<GameObject> chessmanPrefabs;
     private List<GameObject> activeChessman;
 
-    //private Material previousMat;
-    //private Material selectedMat;
-
-    //public GameObject PromotionUI;
     public int promotionIndex { set; get; }
 
     public int[] enPassantMove { set; get; }
 
     private Quaternion orientation = Quaternion.Euler(0,270,0);
 
-   // private ChessAI chessAI;
-
     public bool isWhiteTurn = true;
     public bool isGameEnded = false;
     public bool isChecked = false;
     private void Start()
     {
-        
         Instance = this;
-        
-        //chessAI = new ChessAI();
-
         Chessmans = new Chessman[8, 8];
-
         SpawnAllChessman();
     }
     private void Update()
-    {
-        
+    {   
         UpdateSelection();
         DrawChessBoard();
+        updateCamera();
         if (Input.GetMouseButtonDown(0))
         {
             if (selectionX>=0 && selectionY>=0)
@@ -66,29 +62,10 @@ public class BoardManager : MonoBehaviour
                 {
                     //Move the chessman
                     MoveChessman(selectionX,selectionY);
-                    
-                    updateCamera();
                     PauseMenu.isWhiteTurn = isWhiteTurn;
                 }
             }
         }
-       
-        //AI is black
-        //if (!isWhiteTurn)
-        //{
-        //    Vector2 aiMove = new Vector2();
-        //    Debug.Log(string.Format("Initial Values: x = {0}, y = {1}", aiMove.x, aiMove.y));
-
-        //    do
-        //    {
-        //        selectedChessman = chessAI.SelectChessFigure();
-        //        aiMove = chessAI.MakeMove(selectedChessman);
-        //        Debug.Log(string.Format("{0} - {1}", aiMove.x, aiMove.y));
-        //    } while (aiMove.x<0&&aiMove.y<0);
-        //    MoveChessman((int)Mathf.Round(aiMove.x), (int)Mathf.Round(aiMove.y));
-
-        //}
-
     }
 
     private void SelectChessman(int x, int y)
@@ -141,7 +118,6 @@ public class BoardManager : MonoBehaviour
                 }
                 activeChessman.Remove(c.gameObject);
                 Destroy(c.gameObject);
-
             }
             if (x==enPassantMove[0]&&y==enPassantMove[1])
             {
@@ -158,28 +134,22 @@ public class BoardManager : MonoBehaviour
             enPassantMove[1] = -1;
             if (selectedChessman.GetType()==typeof(Pawn))
             {
-                //Beyaz Piyon Terfisi
+                //White Pawn Promotion
                 if (y == 7)
                 {
                     activeChessman.Remove(selectedChessman.gameObject);
                     Destroy(selectedChessman.gameObject);
 
-                    //Piyonun En son kareye gelmesi ile arayüz açılır
+                    //If pawn reaches top or bottom of board ,promotion menu opens
                     PauseMenu.Instance.PromotionUI.SetActive(true);
 
                     /*
-                     StartCoroutine bir metodun bitmeden diğer metodun çalıştırılmasına izin verir.
-                     promotionindex atamasını StartCoroutine olmadan ve WaitUntil kullanmadan yapsaydık
-                     promotionİndexe arayüz tarafında atama yapılmadan varsayılan değer üzerinden fonksiyon gerçekleşecekti.
-                     */
-                    
+                     StartCoroutine allows one method to be executed before the end of one method.
+                    If we didn't assign promotionindex without StartCoroutine and without using WaitUntil,
+                    the function would have been performed over the default value without any assignment on the promotionindex.*/
                     StartCoroutine(WaitingUIAnswer(x,y));
-                    
-
-
-
                 }
-                //Siyah Piyon Terfisi
+                //Black Pawn Promotion
                 else if (y == 0)
                 {
                     activeChessman.Remove(selectedChessman.gameObject);
@@ -187,9 +157,8 @@ public class BoardManager : MonoBehaviour
 
                     PauseMenu.Instance.PromotionUI.SetActive(true);
                     StartCoroutine(WaitingUIAnswer(x, y));
-
                 }
-                //Geçerken Alma Kuralı
+                //EnPassant Rule
                 if (selectedChessman.CurrentY==1&& y==3)
                 {
                     enPassantMove[0] = x;
@@ -202,17 +171,15 @@ public class BoardManager : MonoBehaviour
                 }
             }
            
-
             Chessmans[selectedChessman.CurrentX, selectedChessman.CurrentY] = null;
             selectedChessman.transform.position = GetTileCenter(x, y);
             selectedChessman.setPosition(x, y);
             
             Chessmans[x, y] = selectedChessman;
             
-           
+ //---------------------------------------          
                     Check(x,y); 
-                
-           
+                //still in development
 //----------------------------------
 
             isWhiteTurn = !isWhiteTurn;
@@ -221,11 +188,7 @@ public class BoardManager : MonoBehaviour
         BoardHighlights.Instance.Hidehighlights();
        
         selectedChessman = null;
-       
-        
     }
-
-
     private void DrawChessBoard()
     {
         Vector3 widthLine = Vector3.right * 8;
@@ -239,28 +202,22 @@ public class BoardManager : MonoBehaviour
             {
                 start = Vector3.right * i;
                 Debug.DrawLine(start, start + heighthLine);
-
             }
-
         }
-
         //Draw the selection
-        if (selectionX>=0 && selectionY>=0) //-1 e eşit değilse bir şey seçmişiz demektir.
+        if (selectionX>=0 && selectionY>=0) //if not equal to -1 ,it means something selected.
         {
             Debug.DrawLine(Vector3.right*selectionX+Vector3.forward*selectionY,
                 Vector3.right * (selectionX +1) + Vector3.forward * (selectionY+1));
 
             Debug.DrawLine(Vector3.right * selectionX + Vector3.forward * (selectionY +1),
                 Vector3.right * (selectionX + 1) + Vector3.forward * selectionY);
-
         }
-
     }
-
-    //KAMERA VE MOUSE POZİSYONUNA BAĞLI OLARAK SELECTION UPDATE EDİLECEK
+    //Selection will be updated when camera and mouse position change.
     private void UpdateSelection()
     {
-        if (!Camera.main) //Eğer ana kamera yoksa
+        if (!Camera.main) //If there is no main Camera
         {
             return;
         }
@@ -270,7 +227,6 @@ public class BoardManager : MonoBehaviour
         {
             selectionX = (int)hit.point.x;
             selectionY = (int)hit.point.z;
-
         }
         else
         {
@@ -282,7 +238,10 @@ public class BoardManager : MonoBehaviour
 
     private void updateCamera()
     {
-        // GameObject Targetposition=new GameObject();
+        /**
+            This function changes Camera position automatically.
+           Position changing is turn based.
+         */
          int posZ=-1;
         int rotY = 0;
        
@@ -290,24 +249,18 @@ public class BoardManager : MonoBehaviour
         {
             posZ = 9;
             rotY = 180;
-          
-            
         }
-
-
 
         Camera.main.transform.position = new Vector3(4, 6, posZ);
 
         Camera.main.transform.eulerAngles = new Vector3(55, rotY, 0);
-        
-
     }
     private void SpawnChessman(int index, int x, int y)
     {
         if (index < 6)
         {
             GameObject go = Instantiate(chessmanPrefabs[index], GetTileCenter(x,y), Quaternion.Euler(0,90,0));
-            go.transform.SetParent(transform); //Tahtaya bağlı hareket ediyor.
+            go.transform.SetParent(transform); //Moves with board.
             Chessmans[x, y] = go.GetComponent<Chessman>();
             Chessmans[x, y].setPosition(x, y);
             activeChessman.Add(go);
@@ -315,12 +268,11 @@ public class BoardManager : MonoBehaviour
         else
         {
             GameObject go = Instantiate(chessmanPrefabs[index], GetTileCenter(x,y), orientation);
-            go.transform.SetParent(transform); //Tahtaya bağlı hareket ediyor.
+            go.transform.SetParent(transform); //Moves with board.
             Chessmans[x, y] = go.GetComponent<Chessman>();
             Chessmans[x, y].setPosition(x, y);
             activeChessman.Add(go);
         }
-        
     }
 
     public void SpawnAllChessman()
@@ -331,7 +283,7 @@ public class BoardManager : MonoBehaviour
 
         Debug.Log("Started");
 
-        //Sıranın kimde olduğunu arayüze aktarmak için yapılan bool ataması
+        //Bool assignment for transferring the turn info to the UI 
         PauseMenu.isWhiteTurn = isWhiteTurn;
 
         //Spawn the White Team!
@@ -383,7 +335,6 @@ public class BoardManager : MonoBehaviour
         {
             SpawnChessman(11, i, 6);
         }
-        Debug.Log("test");
     }
     private Vector3 GetTileCenter(int x, int y)
     {
@@ -436,11 +387,11 @@ public class BoardManager : MonoBehaviour
     IEnumerator WaitingUIAnswer(int x,int y)
     {
         /*
-         * Parametre olarak taşların x,y koordinatlarını alır.
-         * Wait Until ,belirlenen koşul doğru olana kadar bir sonraki işlemi bekletir.
-         * terfi için gerekli indexs bilgisi varsayılan olarak 0 dır.
-         * Bu durumda PauseMenu(UI işlemlerinin olduğu sınıf) kısmında terfi için yapılan index atamalarını beklemek durumunda kalır
-         * Ardındanda promotion index ve konum bilgisi ile SpawnChessman metodu çağırılır ve istenen taş oyuna eklenmiş olur. 
+         * Parameters: x and y coordinates of pawn which on the last square.
+         * Wait Until , if statement true, next process starts.if statement false, next process wait until it is true.
+         * promotionIndex default value is zero
+         * In this case, PauseMenu (the class with the UI operations) will have to wait for index assignments for the promotionIndex.
+         * Then the SpawnChessman method is called with the promotion index and position information and the desired stone is added to the game.
          */
         yield return new WaitUntil(() => promotionIndex > 0);
         SpawnChessman(promotionIndex, x, y);
@@ -448,7 +399,7 @@ public class BoardManager : MonoBehaviour
         promotionIndex = 0;
     }
     /*
-     * ŞAh çekme metodu şimdilik arkaplanda çalışıyor. ama düzgün değil. 
+        Check method stil in development.
      */
     public void Check(int x,int y)
     {
@@ -467,8 +418,7 @@ public class BoardManager : MonoBehaviour
                    
                     isChecked = true;
                     c2 = Chessmans[i, j];
-                   
-                   
+                                 
                     Debug.Log(isChecked);
                 }
                 else if (c != null && c.GetType() == typeof(King) && allowedMoves[i, j])
@@ -477,15 +427,7 @@ public class BoardManager : MonoBehaviour
                 }
                 else
                     isChecked = false;
-                
-            }
-            
+            }   
         }
-       
-
     }
-   
-
-   
 }
-
